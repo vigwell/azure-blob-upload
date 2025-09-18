@@ -1,0 +1,29 @@
+{
+  "name": "azure-blob-chunked-upload",
+  "version": "1.0.0",
+  "description": "Node.js project for chunked upload to Azure Blob Storage",
+  "main": "upload.js",
+  "scripts": {
+    "start": "node upload.js",
+    "upload": "node upload.js",
+    "setup": "node setup.js",
+    "test-api": "curl -k -X POST https://localhost:7000/api/Video/sas -H 'Content-Type: application/json' -d '{\"companyIdFromUserToken\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"sessionId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"streamId\":\"test\"}'"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "azure",
+    "blob-storage",
+    "chunked-upload",
+    "webm"
+  ],
+  "author": "Vigen Shahbazian",
+  "license": "MIT"
+}
