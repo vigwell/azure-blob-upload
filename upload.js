@@ -5,6 +5,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const WebSocket = require('ws');
 
 // Конфигурация из переменных окружения
 const CONFIG = {
@@ -17,6 +18,7 @@ const CONFIG = {
     COMPANY_ID: process.env.COMPANY_ID || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
     SESSION_ID: process.env.SESSION_ID || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
     OVERLAY_TEXT: process.env.OVERLAY_TEXT || 'Processing Video...',
+    WSS_ACCESS_URL: process.env.WSS_ACCESS_URL, 
     STREAM_ID: 'stream-' + Date.now()
 };
 
@@ -323,12 +325,46 @@ function formatFileSize(bytes) {
 }
 
 /**
+ * Подключение к WebSocket и прослушивание сообщений
+ */
+function connectWebSocket() {
+    if (!CONFIG.WSS_ACCESS_URL) {
+        console.warn('⚠️ WSS_ACCESS_URL не задан в .env, WebSocket не подключен.');
+        return;
+    }
+
+    const ws = new WebSocket(CONFIG.WSS_ACCESS_URL);
+
+    ws.on('open', () => {
+        console.log(`🔗 WebSocket подключен к ${CONFIG.WSS_ACCESS_URL}`);
+    });
+
+    ws.on('message', (data) => {
+        console.log('📩 Сообщение от WebSocket:\n===============\n', data.toString(),'\n===============\n');
+    });
+
+    ws.on('close', (code, reason) => {
+        console.log(`❌ WebSocket отключен. Код: ${code}, Причина: ${reason}`);
+    });
+
+    ws.on('error', (error) => {
+        console.error('💥 Ошибка WebSocket:', error.message);
+    });
+
+    return ws;
+}
+
+
+/**
  * Главная функция
  */
 async function main() {
     console.log('🎬 Azure Blob Storage Chunked Upload');
     console.log('=====================================');
     
+    // Запускаем WebSocket
+    const ws = connectWebSocket();
+
     // Показываем текущую конфигурацию
     console.log(`⚙️  Режим: ${CONFIG.IS_DEBUG ? '🔧 DEBUG' : '🏭 PRODUCTION'}`);
     console.log(`🌐 API URL: ${CONFIG.API_BASE_URL}`);
@@ -374,10 +410,10 @@ async function main() {
         
         await finalizeUpload(CONFIG.STREAM_ID, sasData.blobPrefix, overlayText);
         
-        console.log('\n✨ Процесс завершен! Файлы переданы на обработку.');
-        console.log('📺 FFmpeg worker начнет обработку в ближайшее время.');
+        //console.log('\n✨ Процесс завершен! Файлы переданы на обработку.');
+        //console.log('📺 FFmpeg worker начнет обработку в ближайшее время.');
         
-        console.log('\nready');
+        //console.log('\nready');
         
     } catch (error) {
         console.error('\n💥 Критическая ошибка:');
