@@ -5,14 +5,12 @@ yarn-debug.log*
 yarn-error.log*
 
 # Переменные окружения (содержат секреты)
-.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
 # Тестовые файлы
-*.webm
 *.mp4
 *.avi
 *.mkv
