@@ -325,7 +325,7 @@ async function main() {
         console.log(`📂 Префикс: ${sasData.blobPrefix}`);
  
         const overlayText = CONFIG.OVERLAY_TEXT || `Patient ID: ${CONFIG.SESSION_ID.substring(0, 8)}`;
-        const finalizeResult = await finalizeUpload(CONFIG.STREAM_ID, sasData.blobPrefix, overlayText);
+        const finalizeResult = await finalizeUpload(CONFIG.STREAM_ID, CONFIG.STUDY_ID, sasData.blobPrefix, overlayText);
 
         if (CONFIG.TEST_CANCEL_JOB_IN_SECONDS >= 0) {
             console.log(`\n🧪 TEST_CANCEL_JOB_IN_SECONDS=${CONFIG.TEST_CANCEL_JOB_IN_SECONDS} — ожидаем перед отменой...`);
