@@ -19,6 +19,8 @@ const CONFIG = {
     COMPANY_ID: process.env.COMPANY_ID || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
     SESSION_ID: process.env.SESSION_ID || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
     OVERLAY_TEXT: process.env.OVERLAY_TEXT || 'Processing Video...',
+    MAKE_CAPTIONS: process.env.MAKE_CAPTIONS !== 'false',
+    TEST_CANCEL_JOB_IN_SECONDS: parseInt(process.env.TEST_CANCEL_JOB_IN_SECONDS) || 0,
     WSS_ACCESS_URL: null,
     STREAM_ID: 'stream-' + Date.now()
 };
@@ -28,8 +30,8 @@ CONFIG.API_BASE_URL = CONFIG.IS_DEBUG ? CONFIG.DEBUG_URL : CONFIG.REAL_URL;
 
 // Пути к файлам
 const FILES = {
-    VIDEO: './20250925084024_video.webm',
-    AUDIO: './20250925084024_audio.webm'
+    VIDEO: './sample_video.webm',
+    AUDIO: './sample_audio.webm'
 };
 
 /**
@@ -132,7 +134,8 @@ async function finalizeUpload(streamId, blobPrefix, overlayText = 'Processing...
         streamId,
         blobPrefix,
         outputFileName: `final_${streamId}.mp4`,
-        overlayText
+        overlayText,
+        makeCaptions: CONFIG.MAKE_CAPTIONS
     };
 
     const axiosConfig = {
@@ -154,11 +157,39 @@ async function finalizeUpload(streamId, blobPrefix, overlayText = 'Processing...
             console.log('✅ Задача обработки запущена успешно');
             console.log(`🎬 Выходной файл: ${requestData.outputFileName}`);
             console.log(`📝 Текст наложения: ${requestData.overlayText}`);
-            if (CONFIG.IS_DEBUG) console.log('🔍 DEBUG: Ответ finalize API:', JSON.stringify(response.data, null, 2));
+            console.log('Ответ finalize API:', JSON.stringify(response.data, null, 2));
             return response.data;
         } else throw new Error(`Неожиданный статус ответа: ${response.status}`);
     } catch (error) {
         console.error('❌ Ошибка завершения загрузки:', error.message);
+        if (error.response && CONFIG.IS_DEBUG) console.error(JSON.stringify(error.response.data, null, 2));
+        throw error;
+    }
+}
+
+/**
+ * Отменяет задачу обработки видео
+ */
+async function cancelVideoJob(vid) {
+    const axiosConfig = {
+        headers: {
+            'accept': '*/*',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${CONFIG.BEARER_ACCESS_TOKEN}`
+        },
+        timeout: CONFIG.REQUEST_TIMEOUT
+    };
+
+    if (CONFIG.IS_DEBUG) {
+        axiosConfig.httpsAgent = new (require('https')).Agent({ rejectUnauthorized: false });
+    }
+
+    try {
+        const response = await axios.post(`${CONFIG.API_BASE_URL}/Video/cancel`, { vid }, axiosConfig);
+        console.log('✅ Отмена задачи выполнена:', JSON.stringify(response.data, null, 2));
+        return response.data;
+    } catch (error) {
+        console.error('❌ Ошибка отмены задачи:', error.message);
         if (error.response && CONFIG.IS_DEBUG) console.error(JSON.stringify(error.response.data, null, 2));
         throw error;
     }
@@ -291,7 +322,15 @@ async function main() {
         console.log(`📂 Префикс: ${sasData.blobPrefix}`);
 
         const overlayText = CONFIG.OVERLAY_TEXT || `Patient ID: ${CONFIG.SESSION_ID.substring(0, 8)}`;
-        await finalizeUpload(CONFIG.STREAM_ID, sasData.blobPrefix, overlayText);
+        const finalizeResult = await finalizeUpload(CONFIG.STREAM_ID, sasData.blobPrefix, overlayText);
+
+        if (CONFIG.TEST_CANCEL_JOB_IN_SECONDS >= 0) {
+            console.log(`\n🧪 TEST_CANCEL_JOB_IN_SECONDS=${CONFIG.TEST_CANCEL_JOB_IN_SECONDS} — ожидаем перед отменой...`);
+            await new Promise(resolve => setTimeout(resolve, CONFIG.TEST_CANCEL_JOB_IN_SECONDS * 1000));
+            const vid = finalizeResult.vid;
+            console.log(`🛑 Вызываем cancel для vid: ${vid}`);
+            await cancelVideoJob(vid);
+        }
 
     } catch (error) {
         console.error('\n💥 Критическая ошибка:', error.message);
